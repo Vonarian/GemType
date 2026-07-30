@@ -218,6 +218,13 @@ xcodebuild -project safari/GemType/GemType.xcodeproj -scheme GemType -configurat
 
 Then in Safari: Settings → Developer → **Allow unsigned extensions** → enable GemType.
 
+## Changelog
+
+Full notes on the [releases page](../../releases).
+
+- **v0.1.5** — Works in LinkedIn's post composer and other pop-up / shadow-DOM editors (grammar checking *and* the rewrite toolbar); new **About** section in Settings (version, star on GitHub, check for updates); refreshed icon.
+- **v0.1.4** — **Desktop app** (macOS · Windows · Linux) and **Microsoft Word** add-in; unified blue-check icon across every surface.
+
 ## Roadmap
 
 - [x] **Chrome Web Store** — [live](https://chromewebstore.google.com/detail/linnnamnhkciekgpnegkcajcafmjlhgh)
