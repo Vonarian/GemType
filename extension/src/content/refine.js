@@ -17,6 +17,26 @@ GT.refine = (() => {
   let pending = null; // { field, start, end, text }
   let busy = false;
 
+  // Editors like LinkedIn's post composer live inside a shadow root. Two helpers
+  // pierce it: document.activeElement returns the shadow host, and
+  // document.getSelection() cannot see inside shadow DOM at all — so we walk to
+  // the real focused element and read the selection from its own root.
+  function deepActiveElement() {
+    let a = document.activeElement;
+    while (a && a.shadowRoot && a.shadowRoot.activeElement) a = a.shadowRoot.activeElement;
+    return a;
+  }
+
+  function activeSelection() {
+    const a = deepActiveElement();
+    const root = a && a.getRootNode ? a.getRootNode() : null;
+    if (root instanceof ShadowRoot && typeof root.getSelection === 'function') {
+      const s = root.getSelection();
+      if (s && s.rangeCount) return s;
+    }
+    return window.getSelection();
+  }
+
   function hide() {
     if (bar) bar.remove();
     bar = null;
@@ -26,7 +46,7 @@ GT.refine = (() => {
 
   // Capture the current selection if it is inside a managed editable field.
   function captureSelection() {
-    const active = document.activeElement;
+    const active = deepActiveElement();
     if (GT.isNativeField(active)) {
       const start = active.selectionStart;
       const end = active.selectionEnd;
@@ -38,7 +58,7 @@ GT.refine = (() => {
         text: active.value.slice(start, end),
       };
     }
-    const sel = window.getSelection();
+    const sel = activeSelection();
     if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return null;
     const field = GT.findEditable(sel.anchorNode);
     if (!field || GT.isNativeField(field)) return null;
@@ -53,14 +73,14 @@ GT.refine = (() => {
   }
 
   function selectionAnchorRect() {
-    const active = document.activeElement;
+    const active = deepActiveElement();
     if (GT.isNativeField(active)) {
       // Approximate: bottom of the field near its horizontal center is fine
       // for native fields; precise caret rects need the mirror (overkill here).
       const r = active.getBoundingClientRect();
       return new DOMRect(r.left + r.width / 4, r.top, 0, Math.min(r.height, 24));
     }
-    const sel = window.getSelection();
+    const sel = activeSelection();
     if (sel && sel.rangeCount) {
       const rects = sel.getRangeAt(0).getClientRects();
       if (rects.length) return rects[rects.length - 1];
@@ -155,14 +175,15 @@ GT.refine = (() => {
   }
 
   function init() {
-    document.addEventListener(
-      'selectionchange',
-      GT.debounce(() => {
-        if (busy) return;
-        if (!GT.state.enabledHere()) return hide();
-        show();
-      }, 250)
-    );
+    const maybeShow = GT.debounce(() => {
+      if (busy) return;
+      if (!GT.state.enabledHere()) return hide();
+      show();
+    }, 250);
+    document.addEventListener('selectionchange', maybeShow);
+    // selectionchange is unreliable for selections inside shadow DOM across
+    // Chromium versions; mouseup is a reliable backup after a drag-select.
+    document.addEventListener('mouseup', maybeShow, true);
     document.addEventListener(
       'mousedown',
       (e) => {

@@ -1,0 +1,34 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>GemType harness — shadow-DOM editor (LinkedIn pattern)</title>
+<style>body{font-family:system-ui;max-width:760px;margin:40px auto;padding:0 20px}#host{margin-top:20px}</style></head>
+<body>
+<h1>Shadow-DOM editor repro</h1>
+<p>A contenteditable with <code>data-gramm="false"</code> inside a <b>shadow root</b> — LinkedIn's post composer pattern. Select text; the refine toolbar should appear.</p>
+<div id="host"></div>
+<script>
+  // build the shadow editor (like div.theme--light > shadow > .ql-editor)
+  const host = document.getElementById('host');
+  const sr = host.attachShadow({ mode: 'open' });
+  const ed = document.createElement('div');
+  ed.className = 'ql-editor';
+  ed.setAttribute('contenteditable', 'true');
+  ed.setAttribute('data-gramm', 'false');
+  ed.style.cssText = 'border:1px solid #ccc;border-radius:8px;padding:12px;min-height:80px;font-size:15px';
+  ed.textContent = 'She dont like going their on the weekends.';
+  sr.appendChild(ed);
+</script>
+<script>
+  // mock chrome (same as harness.html)
+  const MOCK = { 'She dont':[{original:'dont',replacement:"doesn't",type:'grammar'},{original:'their',replacement:'there',type:'spelling'}] };
+  window.__mockLog = [];
+  window.chrome = { runtime:{ lastError:null, sendMessage(m){ window.__mockLog.push(m.type); return new Promise(r=>setTimeout(()=>{
+    if(m.type==='GET_SETTINGS') r({ok:true,result:{enabled:true,apiKey:'FAKE',model:'mock',disabledSites:[],language:'auto'}});
+    else if(m.type==='CHECK_TEXT'){let c=[];for(const k in MOCK)if(m.text.includes(k))c=MOCK[k];r({ok:true,result:{corrections:c}});}
+    else if(m.type==='REFINE_TEXT') r({ok:true,result:{rewritten:'['+m.action.toUpperCase()+'] '+m.text}});
+    else r({ok:true,result:true}); },100)); }, onMessage:{addListener(){}} },
+    storage:{ local:{get:async()=>({}),set:async()=>{}}, onChanged:{addListener(){}} } };
+</script>
+<script src="../extension/src/content/util.js"></script>
+<script src="../extension/src/content/overlay.js"></script>
+<script src="../extension/src/content/refine.js"></script>
+<script src="../extension/src/content/content.js"></script>
+</body></html>
