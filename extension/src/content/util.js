@@ -11,14 +11,15 @@ if (typeof browser !== 'undefined') globalThis.chrome = browser;
 
 const GT = {};
 
-// Sites (and rich editors like ProseMirror/Quill) opt out of Grammarly with
-// these attributes; we honor them too, plus our own.
-GT.OPT_OUT_ATTRS = [
-  'data-gemtype',
-  'data-gramm',
-  'data-gramm_editor',
-  'data-enable-grammarly',
-];
+// We honor only GemType's own opt-out attribute. We deliberately do NOT honor
+// Grammarly's (data-gramm / data-gramm_editor / data-enable-grammarly): sites
+// set those to block Grammarly specifically, usually because Grammarly injects
+// into the editor's DOM and breaks rich editors. GemType never mutates the
+// editor — it draws a separate overlay — so that reason doesn't apply, and
+// honoring a competitor's block just makes GemType silently fail on major sites
+// (e.g. LinkedIn's post composer sets data-gramm="false"). Sites that truly
+// want to exclude GemType can use data-gemtype="false".
+GT.OPT_OUT_ATTRS = ['data-gemtype'];
 
 GT.isTextarea = (el) => el instanceof HTMLTextAreaElement;
 

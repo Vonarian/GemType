@@ -40,7 +40,6 @@ receive, or store any of your data**. There is no GemType server.
 
 - Disable GemType globally or per-site from the toolbar popup
 - Website owners can opt fields out with `data-gemtype="false"`
-  (`data-gramm="false"` is honored as well)
 - Uninstalling the extension deletes all stored settings, including your API
   key
 - Avoid using GemType in fields containing passwords or other secrets; text

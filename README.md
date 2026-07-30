@@ -54,7 +54,7 @@ Works in **any language** (auto-detected), on any website, inside Word, and now 
 - **Context-aware suggestions** — an LLM judges whole sentences in any language, not just pattern rules
 - **Bring your own key** — uses your free [Google AI Studio](https://aistudio.google.com/apikey) key; no account, no subscription, no middleman server
 - **Private by design** — text goes only to Google's Gemini API; no tracking, no analytics, nothing else phones home
-- **Full control** — per-site disable, global toggle, model picker, language setting; honors `data-gramm="false"` opt-outs
+- **Full control** — per-site disable, global toggle, model picker, language setting; sites can exclude a field with `data-gemtype="false"`
 
 ## Comparison with Grammarly
 
@@ -164,7 +164,7 @@ Unsigned for now (code-signing certificates cost money — see [sponsor](#sponso
 - Your API key lives in `chrome.storage.local` on your device; it is never synced or transmitted anywhere else
 - Password fields are never read, and payment or one-time-code fields are skipped at the code level
 - No accounts, no telemetry, no third-party servers
-- Sites can opt out with `data-gemtype="false"`; Grammarly-style opt-outs are honored as well
+- Sites can exclude a field from GemType with `data-gemtype="false"` (GemType does not honor Grammarly's `data-gramm` attributes, since it draws an overlay and never modifies the editor)
 
 ## Project structure
 
