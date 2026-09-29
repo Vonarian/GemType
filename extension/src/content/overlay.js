@@ -461,6 +461,7 @@ GT.preview = (() => {
   let outsideClickHandler = null;
   let activeOnAccept = null;
   let activeOnDiscard = null;
+  let activeField = null;
 
   function close() {
     if (cardEl) {
@@ -477,13 +478,25 @@ GT.preview = (() => {
     }
     activeOnAccept = null;
     activeOnDiscard = null;
+    activeField = null;
   }
 
-  function open({ title, text, anchor, onAccept, onDiscard } = {}) {
+  function open({ title, text, anchor, field, onAccept, onDiscard } = {}) {
     close();
 
+    activeField = field || null;
     activeOnAccept = onAccept;
     activeOnDiscard = onDiscard;
+
+    const handleDiscard = (e) => {
+      const cb = activeOnDiscard;
+      const targetField = activeField;
+      close();
+      if (typeof cb === 'function') cb(e);
+      if (targetField && typeof targetField.focus === 'function') {
+        try { targetField.focus(); } catch (_) {}
+      }
+    };
 
     const root = GT.ui.ensureRoot();
     cardEl = GT.ui.el('div', 'gt-preview-card', root);
@@ -497,9 +510,7 @@ GT.preview = (() => {
     closeBtn.textContent = '✕';
     closeBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      const cb = activeOnDiscard;
-      close();
-      if (typeof cb === 'function') cb();
+      handleDiscard(e);
     });
 
     const body = GT.ui.el('div', 'gt-preview-body', cardEl);
@@ -516,7 +527,7 @@ GT.preview = (() => {
       e.stopPropagation();
       const cb = activeOnAccept;
       close();
-      if (typeof cb === 'function') cb();
+      if (typeof cb === 'function') cb(e);
     });
 
     const discardBtn = GT.ui.el(
@@ -527,9 +538,7 @@ GT.preview = (() => {
     discardBtn.textContent = 'Discard Esc';
     discardBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      const cb = activeOnDiscard;
-      close();
-      if (typeof cb === 'function') cb();
+      handleDiscard(e);
     });
 
     // Position near the anchor, clamped to the viewport.
@@ -555,17 +564,26 @@ GT.preview = (() => {
 
     keyHandler = (e) => {
       if (e.key === 'Enter') {
+        const isDiscardTarget =
+          e.target &&
+          (e.target === discardBtn ||
+           e.target === closeBtn ||
+           (typeof discardBtn.contains === 'function' && discardBtn.contains(e.target)) ||
+           (typeof closeBtn.contains === 'function' && closeBtn.contains(e.target)));
+
         e.preventDefault();
         e.stopPropagation();
-        const cb = activeOnAccept;
-        close();
-        if (typeof cb === 'function') cb();
+        if (isDiscardTarget) {
+          handleDiscard(e);
+        } else {
+          const cb = activeOnAccept;
+          close();
+          if (typeof cb === 'function') cb(e);
+        }
       } else if (e.key === 'Escape') {
         e.preventDefault();
         e.stopPropagation();
-        const cb = activeOnDiscard;
-        close();
-        if (typeof cb === 'function') cb();
+        handleDiscard(e);
       }
     };
     document.addEventListener('keydown', keyHandler, true);
@@ -580,9 +598,7 @@ GT.preview = (() => {
           return;
         }
       }
-      const cb = activeOnDiscard;
-      close();
-      if (typeof cb === 'function') cb();
+      handleDiscard(e);
     };
     document.addEventListener('mousedown', outsideClickHandler, true);
 

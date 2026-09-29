@@ -364,6 +364,7 @@ GT.refine = (() => {
         title: `Preview: ${label}`,
         text: rewritten,
         anchor,
+        field: job?.field,
         onAccept: () => {
           const { text: currentText } = GT.extract(job.field);
           let curStart = start;
@@ -392,6 +393,9 @@ GT.refine = (() => {
         onDiscard: () => {
           if (GT.preview && typeof GT.preview.close === 'function') {
             GT.preview.close();
+          }
+          if (job?.field && typeof job.field.focus === 'function') {
+            try { job.field.focus(); } catch (_) {}
           }
         },
       });

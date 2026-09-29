@@ -353,41 +353,90 @@ if (typeof chrome !== 'undefined' && chrome.commands?.onCommand) {
 // ---------------------------------------------------------------------------
 // Context menu: refine the current selection from a right-click.
 
-const MENU_ACTIONS = [
-  ['improve', 'Improve writing'],
-  ['fix', 'Fix grammar & spelling'],
-  ['shorten', 'Shorten'],
-  ['formal', 'Make formal'],
-  ['casual', 'Make casual'],
-];
+async function updateContextMenus(settings) {
+  if (typeof chrome === 'undefined' || !chrome.contextMenus) return;
+  const s = settings || (await getSettings());
+  const presets =
+    Array.isArray(s?.customPresets) && s.customPresets.length > 0
+      ? s.customPresets
+      : (typeof GTStorage !== 'undefined' && GTStorage.DEFAULT_PRESETS) || [
+          { id: 'improve', label: 'Improve' },
+          { id: 'fix', label: 'Fix & Polish' },
+          { id: 'concise', label: 'Concise' },
+          { id: 'formal', label: 'Formal' },
+          { id: 'casual', label: 'Casual' },
+        ];
+
+  const rebuild = () => {
+    chrome.contextMenus.create({
+      id: 'gemtype-root',
+      title: 'GemType',
+      contexts: ['selection'],
+    });
+    for (const preset of presets) {
+      const id = preset.id || preset.action;
+      const title = preset.label || preset.name || id;
+      chrome.contextMenus.create({
+        id: `gemtype-${id}`,
+        parentId: 'gemtype-root',
+        title,
+        contexts: ['selection'],
+      });
+    }
+  };
+
+  return new Promise((resolve) => {
+    let called = false;
+    const done = () => {
+      if (called) return;
+      called = true;
+      if (chrome.runtime?.lastError) {}
+      rebuild();
+      resolve();
+    };
+
+    try {
+      const res = chrome.contextMenus.removeAll(done);
+      if (res && typeof res.then === 'function') {
+        res.then(done, done);
+      }
+    } catch (_) {
+      done();
+    }
+  });
+}
 
 if (typeof chrome !== 'undefined' && chrome.runtime?.onInstalled) {
   chrome.runtime.onInstalled.addListener(() => {
-    if (!chrome.contextMenus) return;
-    chrome.contextMenus.removeAll(() => {
-      chrome.contextMenus.create({
-        id: 'gemtype-root',
-        title: 'GemType',
-        contexts: ['selection'],
-      });
-      for (const [id, title] of MENU_ACTIONS) {
-        chrome.contextMenus.create({
-          id: `gemtype-${id}`,
-          parentId: 'gemtype-root',
-          title,
-          contexts: ['selection'],
-        });
-      }
-    });
+    getSettings().then((s) => updateContextMenus(s)).catch(() => {});
+  });
+}
+
+if (typeof chrome !== 'undefined' && chrome.runtime?.onStartup) {
+  chrome.runtime.onStartup.addListener(() => {
+    getSettings().then((s) => updateContextMenus(s)).catch(() => {});
+  });
+}
+
+if (typeof chrome !== 'undefined' && chrome.storage?.onChanged) {
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== 'local' && area !== 'sync') return;
+    if (changes.settings || changes.apiKey) {
+      cache.clear();
+    }
+    if (changes.settings) {
+      getSettings().then((s) => updateContextMenus(s)).catch(() => {});
+    }
   });
 }
 
 if (typeof chrome !== 'undefined' && chrome.contextMenus?.onClicked) {
   chrome.contextMenus.onClicked.addListener((info, tab) => {
-    if (!tab?.id || !info.menuItemId.startsWith('gemtype-')) return;
+    if (!tab?.id || !info.menuItemId || typeof info.menuItemId !== 'string') return;
+    if (!info.menuItemId.startsWith('gemtype-')) return;
     const action = info.menuItemId.replace('gemtype-', '');
     if (action === 'root') return;
-    chrome.tabs.sendMessage(tab.id, { type: 'CONTEXT_REFINE', action }).catch(() => {});
+    chrome.tabs.sendMessage(tab.id, { type: 'CONTEXT_REFINE', action, presetId: action }).catch(() => {});
   });
 }
 
@@ -402,5 +451,7 @@ if (typeof module !== 'undefined' && module.exports) {
     refineText,
     resolvePrompt,
     REFINE_PROMPTS,
+    updateContextMenus,
+    cache,
   };
 }

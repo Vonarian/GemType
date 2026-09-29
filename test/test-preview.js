@@ -385,6 +385,74 @@ test('GT.preview: Enter key triggers onAccept, Escape key triggers onDiscard', (
   assert.strictEqual(GT.preview.getCard(), null, 'Card must be closed after Escape');
 });
 
+test('GT.preview: Enter key while focused on Discard or Close button triggers onDiscard and restores focus to field', () => {
+  const { mockDoc, GT } = setupPreviewTestEnv();
+
+  let focusedField = null;
+  const mockField = {
+    focus: () => { focusedField = mockField; },
+  };
+
+  // 1. Enter with target = discardBtn
+  let accepted = false;
+  let discarded = false;
+
+  GT.preview.open({
+    title: 'Preview: Formal',
+    text: 'Formal text.',
+    field: mockField,
+    onAccept: () => { accepted = true; },
+    onDiscard: () => { discarded = true; },
+  });
+
+  const card = GT.preview.getCard();
+  const discardBtn = card.querySelector('.gt-preview-discard');
+  assert.ok(discardBtn, 'Discard button should exist in preview card');
+
+  mockDoc.dispatchEvent({
+    type: 'keydown',
+    key: 'Enter',
+    target: discardBtn,
+    preventDefault: () => {},
+    stopPropagation: () => {},
+  });
+
+  assert.strictEqual(accepted, false, 'Enter on discardBtn must NOT trigger onAccept');
+  assert.strictEqual(discarded, true, 'Enter on discardBtn must trigger onDiscard');
+  assert.strictEqual(focusedField, mockField, 'Discard must restore focus to active field');
+  assert.strictEqual(GT.preview.getCard(), null, 'Card must be closed');
+
+  // 2. Enter with target = closeBtn
+  focusedField = null;
+  accepted = false;
+  discarded = false;
+
+  GT.preview.open({
+    title: 'Preview: Formal',
+    text: 'Formal text.',
+    field: mockField,
+    onAccept: () => { accepted = true; },
+    onDiscard: () => { discarded = true; },
+  });
+
+  const card2 = GT.preview.getCard();
+  const closeBtn = card2.querySelector('.gt-close');
+  assert.ok(closeBtn, 'Close button should exist in preview card');
+
+  mockDoc.dispatchEvent({
+    type: 'keydown',
+    key: 'Enter',
+    target: closeBtn,
+    preventDefault: () => {},
+    stopPropagation: () => {},
+  });
+
+  assert.strictEqual(accepted, false, 'Enter on closeBtn must NOT trigger onAccept');
+  assert.strictEqual(discarded, true, 'Enter on closeBtn must trigger onDiscard');
+  assert.strictEqual(focusedField, mockField, 'Close must restore focus to active field');
+  assert.strictEqual(GT.preview.getCard(), null, 'Card must be closed');
+});
+
 test('GT.preview: outside click triggers onDiscard, inside click does not', () => {
   const { mockDoc, GT } = setupPreviewTestEnv();
 
