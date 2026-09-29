@@ -162,6 +162,13 @@ GT.ui = (() => {
       white-space: nowrap;
     }
     .gt-toolbar button:hover { background: #3a3f45; color: #fff; }
+    .gt-toolbar button:focus,
+    .gt-toolbar button:focus-visible {
+      outline: 2px solid #10a37f;
+      outline-offset: 1px;
+      background: #3a3f45;
+      color: #fff;
+    }
     .gt-toolbar .gt-tb-spin {
       width: 12px; height: 12px; margin: 0 10px;
       border: 2px solid rgba(255,255,255,.3);

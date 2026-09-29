@@ -4,18 +4,37 @@
 
 'use strict';
 
+if (typeof GT === 'undefined') {
+  globalThis.GT = typeof globalThis.GT !== 'undefined' ? globalThis.GT : {};
+}
+
 GT.refine = (() => {
-  const ACTIONS = [
-    ['improve', '✨ Improve'],
-    ['fix', 'Fix'],
-    ['shorten', 'Shorten'],
-    ['formal', 'Formal'],
-    ['casual', 'Casual'],
+  const BUILTIN_PRESETS = [
+    { id: 'improve', label: '✨ Improve' },
+    { id: 'fix', label: 'Fix' },
+    { id: 'shorten', label: 'Shorten' },
+    { id: 'formal', label: 'Formal' },
+    { id: 'casual', label: 'Casual' },
   ];
 
   let bar = null;
   let pending = null; // { field, start, end, text }
   let busy = false;
+
+  function getPresets() {
+    const custom = GT.state?.settings?.customPresets;
+    if (Array.isArray(custom) && custom.length > 0) {
+      return custom;
+    }
+    if (
+      typeof GTStorage !== 'undefined' &&
+      Array.isArray(GTStorage.DEFAULT_PRESETS) &&
+      GTStorage.DEFAULT_PRESETS.length > 0
+    ) {
+      return GTStorage.DEFAULT_PRESETS;
+    }
+    return BUILTIN_PRESETS;
+  }
 
   // Editors like LinkedIn's post composer live inside a shadow root. Two helpers
   // pierce it: document.activeElement returns the shadow host, and
@@ -30,7 +49,11 @@ GT.refine = (() => {
   function activeSelection() {
     const a = deepActiveElement();
     const root = a && a.getRootNode ? a.getRootNode() : null;
-    if (root instanceof ShadowRoot && typeof root.getSelection === 'function') {
+    if (
+      typeof ShadowRoot !== 'undefined' &&
+      root instanceof ShadowRoot &&
+      typeof root.getSelection === 'function'
+    ) {
       const s = root.getSelection();
       if (s && s.rangeCount) return s;
     }
@@ -42,6 +65,38 @@ GT.refine = (() => {
     bar = null;
     pending = null;
     busy = false;
+  }
+
+  function restoreFocusToField() {
+    const job = pending;
+    hide();
+    if (job?.field) {
+      if (typeof job.field.focus === 'function') {
+        job.field.focus();
+      }
+      if (
+        GT.isNativeField(job.field) &&
+        job.start != null &&
+        job.end != null &&
+        typeof job.field.setSelectionRange === 'function'
+      ) {
+        try {
+          job.field.setSelectionRange(job.start, job.end);
+        } catch (_) {}
+      } else if (!GT.isNativeField(job.field) && job.start != null && job.end != null) {
+        try {
+          const sel = window.getSelection();
+          if (sel && typeof GT.extract === 'function' && typeof GT.textRangeToDomRange === 'function') {
+            const { map } = GT.extract(job.field);
+            const range = GT.textRangeToDomRange(map, job.start, job.end);
+            if (range) {
+              sel.removeAllRanges();
+              sel.addRange(range);
+            }
+          }
+        } catch (_) {}
+      }
+    }
   }
 
   // Capture the current selection if it is inside a managed editable field.
@@ -72,25 +127,114 @@ GT.refine = (() => {
     return { field, start, end, text: text.slice(start, end) };
   }
 
+  function makeRect(left, top, width, height) {
+    if (typeof DOMRect !== 'undefined') {
+      try {
+        return new DOMRect(left, top, width, height);
+      } catch (_) {}
+    }
+    return {
+      left,
+      top,
+      width,
+      height,
+      right: left + width,
+      bottom: top + height,
+    };
+  }
+
   function selectionAnchorRect() {
-    const active = deepActiveElement();
-    if (GT.isNativeField(active)) {
+    const active = deepActiveElement() || pending?.field;
+    if (active && GT.isNativeField(active)) {
       // Approximate: bottom of the field near its horizontal center is fine
       // for native fields; precise caret rects need the mirror (overkill here).
-      const r = active.getBoundingClientRect();
-      return new DOMRect(r.left + r.width / 4, r.top, 0, Math.min(r.height, 24));
+      const r = active.getBoundingClientRect ? active.getBoundingClientRect() : { left: 0, top: 0, width: 100, height: 24 };
+      const left = r.left || 0;
+      const top = r.top || 0;
+      const width = r.width || 0;
+      const height = r.height || 24;
+      return makeRect(left + width / 4, top, 0, Math.min(height, 24));
     }
     const sel = activeSelection();
     if (sel && sel.rangeCount) {
-      const rects = sel.getRangeAt(0).getClientRects();
+      const rects = sel.getRangeAt(0).getClientRects ? sel.getRangeAt(0).getClientRects() : [];
       if (rects.length) return rects[rects.length - 1];
     }
-    return null;
+    if (active && active.getBoundingClientRect) {
+      const r = active.getBoundingClientRect();
+      return makeRect(r.left || 0, r.top || 0, r.width || 0, Math.min(r.height || 24, 24));
+    }
+    return makeRect(0, 0, 0, 24);
   }
 
-  function show() {
-    const captured = captureSelection();
-    if (!captured || captured.text.trim().length < 3) {
+  function renderButtons() {
+    if (!bar) return;
+    bar.textContent = '';
+    const presets = getPresets();
+    for (const preset of presets) {
+      let action, label;
+      if (Array.isArray(preset)) {
+        action = preset[0];
+        label = preset[1] || preset[0];
+      } else if (preset && typeof preset === 'object') {
+        action = preset.id || preset.action;
+        label = preset.label || preset.name || action;
+      } else if (typeof preset === 'string') {
+        action = preset;
+        label = preset;
+      }
+      if (!action) continue;
+
+      const btn = GT.ui.el('button', '', bar);
+      btn.textContent = label;
+      btn.dataset.action = action;
+      btn.dataset.presetId = action;
+      btn.action = action;
+      btn.presetId = action;
+      btn.addEventListener('click', () => run(action));
+    }
+  }
+
+  function onToolbarKeyDown(e) {
+    if (busy) return;
+    const buttons = Array.from(bar.querySelectorAll('button:not([disabled])'));
+    if (!buttons.length) return;
+
+    let currentIdx = buttons.indexOf(e.target);
+    if (currentIdx === -1) {
+      const root = GT.ui.ensureRoot();
+      const active = root?.activeElement || document.activeElement;
+      currentIdx = buttons.indexOf(active);
+    }
+
+    if (e.key === 'ArrowRight' || (e.key === 'Tab' && !e.shiftKey)) {
+      e.preventDefault();
+      e.stopPropagation();
+      const nextIdx = currentIdx >= 0 ? (currentIdx + 1) % buttons.length : 0;
+      buttons[nextIdx].focus();
+    } else if (e.key === 'ArrowLeft' || (e.key === 'Tab' && e.shiftKey)) {
+      e.preventDefault();
+      e.stopPropagation();
+      const prevIdx =
+        currentIdx >= 0
+          ? (currentIdx - 1 + buttons.length) % buttons.length
+          : buttons.length - 1;
+      buttons[prevIdx].focus();
+    } else if (e.key === 'Enter' || e.key === ' ' || e.key === 'Space' || e.key === 'Spacebar') {
+      e.preventDefault();
+      e.stopPropagation();
+      const targetBtn = currentIdx >= 0 ? buttons[currentIdx] : buttons[0];
+      if (targetBtn) targetBtn.click();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      restoreFocusToField();
+    }
+  }
+
+  function show(preCaptured = null) {
+    const captured = preCaptured || captureSelection();
+    if (!captured || captured.text.trim().length < (preCaptured ? 1 : 3)) {
       if (!busy) hide();
       return;
     }
@@ -105,17 +249,33 @@ GT.refine = (() => {
       bar = GT.ui.el('div', 'gt-toolbar', root);
       // preventDefault on mousedown keeps the page selection alive.
       bar.addEventListener('mousedown', (e) => e.preventDefault());
-      for (const [action, label] of ACTIONS) {
-        const btn = GT.ui.el('button', '', bar);
-        btn.textContent = label;
-        btn.addEventListener('click', () => run(action));
-      }
+      bar.addEventListener('keydown', onToolbarKeyDown);
     }
-    const w = bar.getBoundingClientRect().width || 320;
-    bar.style.left = `${Math.min(Math.max(anchor.left, 8), innerWidth - w - 8)}px`;
+    renderButtons();
+
+    const w = bar.getBoundingClientRect ? (bar.getBoundingClientRect().width || 320) : 320;
+    const innerW = typeof window !== 'undefined' && window.innerWidth ? window.innerWidth : 1024;
+    const innerH = typeof window !== 'undefined' && window.innerHeight ? window.innerHeight : 768;
+    bar.style.left = `${Math.min(Math.max(anchor.left, 8), innerW - w - 8)}px`;
     const top = anchor.bottom + 8;
     bar.style.top =
-      top > innerHeight - 50 ? `${anchor.top - 44}px` : `${top}px`;
+      top > innerH - 50 ? `${anchor.top - 44}px` : `${top}px`;
+  }
+
+  function triggerFromShortcut() {
+    if (busy) return;
+    const captured = captureSelection();
+    if (!captured || !captured.text || captured.text.trim().length === 0) {
+      GT.ui.toast('GemType: select text first to rewrite');
+      return;
+    }
+    show(captured);
+    if (bar) {
+      const firstBtn = bar.querySelector('button');
+      if (firstBtn && typeof firstBtn.focus === 'function') {
+        firstBtn.focus();
+      }
+    }
   }
 
   async function run(action, captured = null) {
@@ -135,6 +295,7 @@ GT.refine = (() => {
       type: 'REFINE_TEXT',
       text: job.text,
       action,
+      presetId: action,
     });
     busy = false;
 
@@ -192,6 +353,19 @@ GT.refine = (() => {
       },
       true
     );
+    document.addEventListener('keydown', (e) => {
+      if (!busy && bar && e.key === 'Escape') {
+        restoreFocusToField();
+      }
+    });
+  }
+
+  if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage?.addListener) {
+    chrome.runtime.onMessage.addListener((msg) => {
+      if (msg && msg.type === 'COMMAND_TRIGGER_REWRITE') {
+        triggerFromShortcut();
+      }
+    });
   }
 
   // For the right-click context menu path from the background worker.
@@ -218,5 +392,20 @@ GT.refine = (() => {
     run(action, { field, start: 0, end: text.length, text });
   }
 
-  return { init, runOnCurrentSelection, runOnField, hide };
+  return {
+    init,
+    runOnCurrentSelection,
+    runOnField,
+    hide,
+    show,
+    triggerFromShortcut,
+    captureSelection,
+    getPresets,
+    getBar: () => bar,
+    getPending: () => pending,
+  };
 })();
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { GT };
+}
