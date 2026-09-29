@@ -370,10 +370,15 @@ GT.refine = (() => {
           let curEnd = end;
           if (currentText.slice(curStart, curEnd) !== job.text) {
             const idx = currentText.indexOf(job.text);
-            if (idx !== -1) {
-              curStart = idx;
-              curEnd = idx + job.text.length;
+            if (idx === -1) {
+              if (GT.preview && typeof GT.preview.close === 'function') {
+                GT.preview.close();
+              }
+              GT.ui.toast('GemType: text changed — rewrite not applied');
+              return;
             }
+            curStart = idx;
+            curEnd = idx + job.text.length;
           }
           if (GT.replaceRange(job.field, curStart, curEnd, rewritten)) {
             GT.ui.toast('Rewritten — press Ctrl/Cmd+Z to undo');

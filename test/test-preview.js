@@ -408,7 +408,24 @@ test('GT.preview: outside click triggers onDiscard, inside click does not', () =
   assert.strictEqual(discarded, false, 'Inside click must not discard preview');
   assert.ok(GT.preview.getCard(), 'Card should remain open after inside click');
 
-  // Click OUTSIDE <gemtype-ext>
+  // Click OUTSIDE card but on another shadow element (e.g. badge or host)
+  const otherShadowEl = createMockElement('div', 'gt-badge');
+  mockDoc.dispatchEvent({
+    type: 'mousedown',
+    target: otherShadowEl,
+    composedPath: () => [otherShadowEl, { tagName: 'GEMTYPE-EXT' }],
+  });
+  assert.strictEqual(discarded, true, 'Click outside card on other element must discard preview');
+  assert.strictEqual(GT.preview.getCard(), null, 'Card must be closed after outside click');
+
+  // Re-open and click OUTSIDE <gemtype-ext> on page content
+  discarded = false;
+  GT.preview.open({
+    title: 'Preview: Formal',
+    text: 'Formal text.',
+    onAccept: () => {},
+    onDiscard: () => { discarded = true; },
+  });
   const outsideDiv = createMockElement('div', 'page-content');
   mockDoc.dispatchEvent({
     type: 'mousedown',
@@ -569,3 +586,49 @@ test('refine run: previewBeforeReplace === false directly replaces without previ
     'Undo toast must be displayed after direct replace'
   );
 });
+
+test('refine run: preview onAccept guards against text changed while preview is open (idx === -1)', async () => {
+  const { toasts, GT } = setupPreviewTestEnv();
+
+  GT.state.settings = {
+    previewBeforeReplace: true,
+    customPresets: [{ id: 'formal', label: 'Formal', prompt: 'Make formal' }],
+  };
+
+  const textarea = createMockElement('textarea');
+  textarea.value = 'Initial text to rewrite.';
+  textarea.setSelectionRange(0, 24);
+  textarea.focus();
+
+  globalThis.chrome.runtime.sendMessage = async () => ({
+    ok: true,
+    result: { rewritten: 'Initial text to rewrite, formally.' },
+  });
+
+  const job = { field: textarea, start: 0, end: 24, text: 'Initial text to rewrite.' };
+  await GT.refine.run('formal', job);
+
+  const card = GT.preview.getCard();
+  assert.ok(card, 'Preview card should be open');
+
+  // While preview is open, field content is modified completely so original text is no longer found
+  textarea.value = 'Completely different content typed by user.';
+
+  // Click Accept
+  const acceptBtn = card.querySelector('.gt-preview-accept');
+  acceptBtn.click();
+
+  // Preview must close, toast shown, and textarea untouched
+  assert.strictEqual(GT.preview.getCard(), null, 'Preview card must be closed');
+  assert.strictEqual(textarea.value, 'Completely different content typed by user.');
+  assert.ok(
+    toasts.includes('GemType: text changed — rewrite not applied'),
+    'Toast "GemType: text changed — rewrite not applied" must be shown'
+  );
+  assert.strictEqual(
+    toasts.includes('Rewritten — press Ctrl/Cmd+Z to undo'),
+    false,
+    'Undo toast must NOT be shown when text changed prevented rewrite'
+  );
+});
+

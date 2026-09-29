@@ -574,12 +574,9 @@ GT.preview = (() => {
       if (cardEl && (cardEl === e.target || (cardEl.contains && cardEl.contains(e.target)))) {
         return;
       }
-      if (e.target && e.target.tagName === 'GEMTYPE-EXT') {
-        return;
-      }
       if (e.composedPath && typeof e.composedPath === 'function') {
         const path = e.composedPath();
-        if (path.some((el) => el && (el === cardEl || el.tagName === 'GEMTYPE-EXT'))) {
+        if (path.some((el) => el === cardEl)) {
           return;
         }
       }

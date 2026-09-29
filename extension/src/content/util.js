@@ -378,3 +378,7 @@ GT.measureNativeRanges = function (field, ranges) {
   }
   return out;
 };
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { GT };
+}
