@@ -85,7 +85,11 @@ GT.refine = (() => {
         } catch (_) {}
       } else if (!GT.isNativeField(job.field) && job.start != null && job.end != null) {
         try {
-          const sel = window.getSelection();
+          const sel =
+            activeSelection() ||
+            (typeof window !== 'undefined' && window.getSelection
+              ? window.getSelection()
+              : null);
           if (sel && typeof GT.extract === 'function' && typeof GT.textRangeToDomRange === 'function') {
             const { map } = GT.extract(job.field);
             const range = GT.textRangeToDomRange(map, job.start, job.end);
@@ -327,11 +331,71 @@ GT.refine = (() => {
       end = idx + job.text.length;
     }
 
+    const anchor = selectionAnchorRect();
     hide();
-    if (GT.replaceRange(job.field, start, end, res.result.rewritten)) {
-      GT.ui.toast('Rewritten — press Ctrl/Cmd+Z to undo');
+
+    const rewritten = res.result?.rewritten;
+    if (rewritten == null) {
+      GT.ui.toast('GemType: rewrite failed');
+      return;
+    }
+
+    const usePreview =
+      GT.state?.settings?.previewBeforeReplace !== false &&
+      typeof GT.preview?.open === 'function';
+
+    if (usePreview) {
+      const presets = getPresets();
+      const matched = presets.find((p) => {
+        if (typeof p === 'string') return p === action;
+        if (p && typeof p === 'object') return (p.id || p.action) === action;
+        return false;
+      });
+      let label = action;
+      if (matched) {
+        if (typeof matched === 'string') label = matched;
+        else if (matched.label) label = matched.label;
+        else if (matched.name) label = matched.name;
+      } else if (typeof action === 'string' && action.length > 0) {
+        label = action.charAt(0).toUpperCase() + action.slice(1);
+      }
+
+      GT.preview.open({
+        title: `Preview: ${label}`,
+        text: rewritten,
+        anchor,
+        onAccept: () => {
+          const { text: currentText } = GT.extract(job.field);
+          let curStart = start;
+          let curEnd = end;
+          if (currentText.slice(curStart, curEnd) !== job.text) {
+            const idx = currentText.indexOf(job.text);
+            if (idx !== -1) {
+              curStart = idx;
+              curEnd = idx + job.text.length;
+            }
+          }
+          if (GT.replaceRange(job.field, curStart, curEnd, rewritten)) {
+            GT.ui.toast('Rewritten — press Ctrl/Cmd+Z to undo');
+          } else {
+            GT.ui.toast('GemType: could not apply the rewrite here');
+          }
+          if (GT.preview && typeof GT.preview.close === 'function') {
+            GT.preview.close();
+          }
+        },
+        onDiscard: () => {
+          if (GT.preview && typeof GT.preview.close === 'function') {
+            GT.preview.close();
+          }
+        },
+      });
     } else {
-      GT.ui.toast('GemType: could not apply the rewrite here');
+      if (GT.replaceRange(job.field, start, end, rewritten)) {
+        GT.ui.toast('Rewritten — press Ctrl/Cmd+Z to undo');
+      } else {
+        GT.ui.toast('GemType: could not apply the rewrite here');
+      }
     }
   }
 
@@ -403,6 +467,7 @@ GT.refine = (() => {
     getPresets,
     getBar: () => bar,
     getPending: () => pending,
+    run,
   };
 })();
 

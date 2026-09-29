@@ -14,6 +14,13 @@
   <h1>GemType harness — mocked Gemini</h1>
   <p>Content scripts loaded directly with a fake <code>chrome</code> API. No real API calls.</p>
 
+  <div style="margin: 20px 0; padding: 12px 16px; background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 8px;">
+    <label style="margin: 0; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; font-weight: 500;">
+      <input type="checkbox" id="previewToggle" checked />
+      Preview before replace (interactive preview tooltip with Enter / Esc controls)
+    </label>
+  </div>
+
   <label>Textarea</label>
   <textarea id="ta" rows="4">She dont like going their on the weekends. Me and him goes there sometime.</textarea>
 
@@ -25,6 +32,15 @@
 
   <script>
     // ---- fake chrome API -------------------------------------------------
+    const MOCK_PRESETS = [
+      { id: 'formal', label: 'Formal', prompt: 'Rewrite this in a professional, polished, and formal tone:' },
+      { id: 'concise', label: 'Concise', prompt: 'Make this text significantly shorter and punchier without losing essential facts:' },
+      { id: 'fix', label: 'Fix & Polish', prompt: 'Correct all spelling, punctuation, and grammar mistakes while preserving voice:' },
+      { id: 'improve', label: 'Improve', prompt: 'Rewrite the text to be clearer and better written while keeping the tone and meaning:' },
+      { id: 'casual', label: 'Casual', prompt: 'Rewrite the text in a friendly, casual, conversational tone:' },
+      { id: 'pirate', label: 'Pirate Talk', prompt: 'Rewrite the text like a salty pirate:' },
+    ];
+
     const MOCK_CORRECTIONS = {
       // keyed by a distinctive substring of the checked text
       'She dont': [
@@ -46,7 +62,20 @@
           window.__mockLog.push(msg.type);
           return new Promise((resolve) => setTimeout(() => {
             if (msg.type === 'GET_SETTINGS') {
-              resolve({ ok: true, result: { enabled: true, apiKey: 'FAKE', model: 'mock', disabledSites: [], language: 'auto' } });
+              const toggle = document.getElementById('previewToggle');
+              const previewBeforeReplace = toggle ? toggle.checked : true;
+              resolve({
+                ok: true,
+                result: {
+                  enabled: true,
+                  apiKey: 'FAKE',
+                  model: 'mock',
+                  disabledSites: [],
+                  language: 'auto',
+                  previewBeforeReplace,
+                  customPresets: MOCK_PRESETS,
+                },
+              });
             } else if (msg.type === 'CHECK_TEXT') {
               let corrections = [];
               for (const key in MOCK_CORRECTIONS) {
@@ -63,10 +92,31 @@
         onMessage: { addListener() {} },
       },
       storage: {
-        local: { get: async () => ({}), set: async () => {} },
+        local: {
+          get: async () => ({
+            apiKey: 'FAKE',
+            gemtype_secrets: { apiKey: 'FAKE' },
+          }),
+          set: async () => {},
+        },
+        sync: {
+          get: async () => ({
+            gemtype_config: {
+              previewBeforeReplace: true,
+              customPresets: MOCK_PRESETS,
+            },
+          }),
+          set: async () => {},
+        },
         onChanged: { addListener() {} },
       },
     };
+
+    document.getElementById('previewToggle').addEventListener('change', (e) => {
+      if (window.GT && window.GT.state && window.GT.state.settings) {
+        window.GT.state.settings.previewBeforeReplace = e.target.checked;
+      }
+    });
   </script>
   <script src="../extension/src/content/util.js"></script>
   <script src="../extension/src/content/overlay.js"></script>

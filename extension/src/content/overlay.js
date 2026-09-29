@@ -4,6 +4,10 @@
 
 'use strict';
 
+if (typeof GT === 'undefined') {
+  globalThis.GT = typeof globalThis.GT !== 'undefined' ? globalThis.GT : {};
+}
+
 GT.ui = (() => {
   let host = null;
   let root = null;
@@ -191,6 +195,86 @@ GT.ui = (() => {
       box-shadow: 0 4px 16px rgba(0,0,0,.3);
       animation: gt-fade .2s ease;
     }
+
+    .gt-preview-card {
+      position: fixed;
+      z-index: 5;
+      width: 320px;
+      max-width: 90vw;
+      background: #fff;
+      color: #1f2328;
+      border: 1px solid #e2e4e8;
+      border-radius: 10px;
+      box-shadow: 0 8px 28px rgba(0,0,0,.22);
+      font-size: 13px;
+      line-height: 1.45;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: gt-fade .15s ease;
+    }
+    .gt-preview-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      border-bottom: 1px solid #eef0f2;
+      background: #f9fafb;
+      font-weight: 600;
+      font-size: 12px;
+      color: #6b7280;
+    }
+    .gt-preview-title {
+      font-weight: 600;
+      font-size: 12px;
+      color: #374151;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .gt-preview-header .gt-close {
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #6b7280;
+    }
+    .gt-preview-header .gt-close:hover {
+      background: #e5e7eb;
+      color: #1f2328;
+    }
+    .gt-preview-body {
+      padding: 10px 12px;
+      max-height: 200px;
+      overflow-y: auto;
+      font-size: 13px;
+      line-height: 1.5;
+      color: #1f2328;
+      white-space: pre-wrap;
+      word-break: break-word;
+      background: #fff;
+    }
+    .gt-preview-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 6px;
+      padding: 8px 12px;
+      border-top: 1px solid #eef0f2;
+      background: #f9fafb;
+    }
+    .gt-preview-btn {
+      border: none;
+      border-radius: 6px;
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .gt-preview-btn:focus,
+    .gt-preview-btn:focus-visible {
+      outline: 2px solid #10a37f;
+      outline-offset: 1px;
+    }
+
     @keyframes gt-fade { from { opacity: 0 } to { opacity: 1 } }
   `;
 
@@ -240,6 +324,9 @@ GT.ui = (() => {
     t.textContent = text;
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => t.remove(), 2500);
+    if (toastTimer && typeof toastTimer.unref === 'function') {
+      toastTimer.unref();
+    }
   }
 
   return { ensureRoot, el, toast };
@@ -363,6 +450,154 @@ GT.card = (() => {
   }
 
   return { open, close, ownedBy };
+})();
+
+// ---------------------------------------------------------------------------
+// Interactive preview tooltip before replacement.
+
+GT.preview = (() => {
+  let cardEl = null;
+  let keyHandler = null;
+  let outsideClickHandler = null;
+  let activeOnAccept = null;
+  let activeOnDiscard = null;
+
+  function close() {
+    if (cardEl) {
+      cardEl.remove();
+      cardEl = null;
+    }
+    if (keyHandler) {
+      document.removeEventListener('keydown', keyHandler, true);
+      keyHandler = null;
+    }
+    if (outsideClickHandler) {
+      document.removeEventListener('mousedown', outsideClickHandler, true);
+      outsideClickHandler = null;
+    }
+    activeOnAccept = null;
+    activeOnDiscard = null;
+  }
+
+  function open({ title, text, anchor, onAccept, onDiscard } = {}) {
+    close();
+
+    activeOnAccept = onAccept;
+    activeOnDiscard = onDiscard;
+
+    const root = GT.ui.ensureRoot();
+    cardEl = GT.ui.el('div', 'gt-preview-card', root);
+    cardEl.addEventListener('mousedown', (e) => e.stopPropagation());
+
+    const header = GT.ui.el('div', 'gt-preview-header', cardEl);
+    const titleEl = GT.ui.el('span', 'gt-preview-title', header);
+    titleEl.textContent = title || 'Preview';
+
+    const closeBtn = GT.ui.el('span', 'gt-close', header);
+    closeBtn.textContent = '✕';
+    closeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const cb = activeOnDiscard;
+      close();
+      if (typeof cb === 'function') cb();
+    });
+
+    const body = GT.ui.el('div', 'gt-preview-body', cardEl);
+    body.textContent = text != null ? String(text) : '';
+
+    const actions = GT.ui.el('div', 'gt-preview-actions', cardEl);
+    const acceptBtn = GT.ui.el(
+      'button',
+      'gt-btn gt-btn-accept gt-preview-btn gt-preview-accept',
+      actions
+    );
+    acceptBtn.textContent = 'Accept ↵';
+    acceptBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const cb = activeOnAccept;
+      close();
+      if (typeof cb === 'function') cb();
+    });
+
+    const discardBtn = GT.ui.el(
+      'button',
+      'gt-btn gt-btn-dismiss gt-preview-btn gt-preview-discard',
+      actions
+    );
+    discardBtn.textContent = 'Discard Esc';
+    discardBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const cb = activeOnDiscard;
+      close();
+      if (typeof cb === 'function') cb();
+    });
+
+    // Position near the anchor, clamped to the viewport.
+    const W = 320;
+    const margin = 8;
+    const innerW = typeof window !== 'undefined' && window.innerWidth ? window.innerWidth : 1024;
+    const innerH = typeof window !== 'undefined' && window.innerHeight ? window.innerHeight : 768;
+    const a = anchor || { left: 20, top: 20, right: 120, bottom: 50 };
+    const leftAnchor = a.left != null ? a.left : 20;
+    const topAnchor = a.top != null ? a.top : 20;
+    const bottomAnchor = a.bottom != null ? a.bottom : (topAnchor + 30);
+
+    let left = Math.min(Math.max(leftAnchor, margin), innerW - W - margin);
+    cardEl.style.left = `${left}px`;
+    cardEl.style.top = '0px';
+
+    const h = cardEl.getBoundingClientRect ? (cardEl.getBoundingClientRect().height || 180) : 180;
+    let top = bottomAnchor + 6;
+    if (top + h > innerH - margin) {
+      top = Math.max(margin, topAnchor - h - 6);
+    }
+    cardEl.style.top = `${top}px`;
+
+    keyHandler = (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+        const cb = activeOnAccept;
+        close();
+        if (typeof cb === 'function') cb();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        const cb = activeOnDiscard;
+        close();
+        if (typeof cb === 'function') cb();
+      }
+    };
+    document.addEventListener('keydown', keyHandler, true);
+
+    outsideClickHandler = (e) => {
+      if (cardEl && (cardEl === e.target || (cardEl.contains && cardEl.contains(e.target)))) {
+        return;
+      }
+      if (e.target && e.target.tagName === 'GEMTYPE-EXT') {
+        return;
+      }
+      if (e.composedPath && typeof e.composedPath === 'function') {
+        const path = e.composedPath();
+        if (path.some((el) => el && (el === cardEl || el.tagName === 'GEMTYPE-EXT'))) {
+          return;
+        }
+      }
+      const cb = activeOnDiscard;
+      close();
+      if (typeof cb === 'function') cb();
+    };
+    document.addEventListener('mousedown', outsideClickHandler, true);
+
+    return cardEl;
+  }
+
+  return {
+    open,
+    close,
+    getCard: () => cardEl,
+    isOpen: () => !!cardEl,
+  };
 })();
 
 // ---------------------------------------------------------------------------
@@ -585,3 +820,8 @@ GT.FieldOverlay = class {
     this.badge.remove();
   }
 };
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { GT };
+}
+
