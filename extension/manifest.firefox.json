@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "GemType — AI Writing Assistant",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Grammarly-style grammar checking and text refinement on any website, powered by the Gemini API (bring your own key).",
   "browser_specific_settings": {
     "gecko": {
@@ -19,12 +19,13 @@
     "128": "icons/icon128.png"
   },
   "background": {
-    "scripts": ["src/background.js"]
+    "scripts": ["src/storage.js", "src/background.js"]
   },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
       "js": [
+        "src/storage.js",
         "src/content/util.js",
         "src/content/overlay.js",
         "src/content/refine.js",
@@ -47,5 +48,14 @@
     "open_in_tab": true
   },
   "permissions": ["storage", "contextMenus"],
+  "commands": {
+    "trigger_rewrite": {
+      "suggested_key": {
+        "default": "Alt+Shift+G",
+        "mac": "Alt+Shift+G"
+      },
+      "description": "Trigger inline rewriting on current selection"
+    }
+  },
   "host_permissions": ["https://generativelanguage.googleapis.com/*"]
 }
