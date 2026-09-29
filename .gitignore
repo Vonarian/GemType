@@ -10,6 +10,7 @@ store/
 launch/
 
 # build artifacts
+dist/
 safari/build/
 xcuserdata/
 *.xcuserstate
