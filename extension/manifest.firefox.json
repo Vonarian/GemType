@@ -19,7 +19,7 @@
     "128": "icons/icon128.png"
   },
   "background": {
-    "scripts": ["src/storage.js", "src/background.js"]
+    "scripts": ["src/storage.js", "src/background-helper.js", "src/background.js"]
   },
   "content_scripts": [
     {

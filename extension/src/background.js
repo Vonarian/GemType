@@ -6,6 +6,10 @@
 // Chrome. (In Firefox this file runs as an event-page background script.)
 if (typeof browser !== 'undefined') globalThis.chrome = browser;
 
+try {
+  importScripts('storage.js', 'background-helper.js');
+} catch (_) {}
+
 const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 const DEFAULT_MODEL = 'gemini-3.1-flash-lite';
 
@@ -16,12 +20,18 @@ const DEFAULT_SETTINGS = {
   disabledSites: [],
   language: 'auto',
   tone: 'neutral',
+  temperature: 0.3,
+  topP: 0.95,
+  fastZeroShot: true,
 };
 
 // ---------------------------------------------------------------------------
 // Settings
 
 async function getSettings() {
+  if (typeof GTStorage !== 'undefined' && GTStorage.getSettings) {
+    return GTStorage.getSettings();
+  }
   const stored = await chrome.storage.local.get('settings');
   return { ...DEFAULT_SETTINGS, ...(stored.settings || {}) };
 }
@@ -88,7 +98,9 @@ async function callGemini(settings, body) {
 
   backoffUntil = 0;
   const data = await res.json();
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  const text = typeof extractCandidateText === 'function'
+    ? extractCandidateText(data)
+    : data?.candidates?.[0]?.content?.parts?.[0]?.text;
   if (typeof text !== 'string') {
     throw new Error('EMPTY_RESPONSE');
   }
@@ -190,14 +202,43 @@ async function checkText(text) {
 
 const REFINE_PROMPTS = {
   improve:
-    'Rewrite the text to be clearer and better written. Keep the meaning, tone, and approximate length.',
-  fix: 'Fix all grammar, spelling, and punctuation errors. Change nothing else.',
+    'Rewrite the text to be clearer and better written while keeping the tone and meaning:',
+  fix: 'Correct all spelling, punctuation, and grammar mistakes while preserving voice:',
   shorten:
-    'Rewrite the text to be significantly more concise while keeping all key information.',
+    'Make this text significantly shorter and punchier without losing essential facts:',
+  concise:
+    'Make this text significantly shorter and punchier without losing essential facts:',
   formal:
-    'Rewrite the text in a professional, formal tone suitable for business communication.',
-  casual: 'Rewrite the text in a friendly, casual, conversational tone.',
+    'Rewrite this in a professional, polished, and formal tone:',
+  casual: 'Rewrite the text in a friendly, casual, conversational tone:',
 };
+
+function resolvePrompt(settings, action, presetId) {
+  const presets = Array.isArray(settings?.customPresets) ? settings.customPresets : [];
+  const targetId = presetId || action;
+
+  if (targetId) {
+    const found = presets.find(
+      (p) =>
+        p &&
+        (p.id === targetId ||
+          (typeof p.label === 'string' &&
+            p.label.toLowerCase() === String(targetId).toLowerCase()))
+    );
+    if (found && typeof found.prompt === 'string' && found.prompt.trim()) {
+      return found.prompt.trim();
+    }
+    if (REFINE_PROMPTS[targetId]) {
+      return REFINE_PROMPTS[targetId];
+    }
+  }
+
+  if (action && typeof action === 'string' && !REFINE_PROMPTS[action]) {
+    return action.trim();
+  }
+
+  return REFINE_PROMPTS.improve;
+}
 
 const REFINE_SCHEMA = {
   type: 'OBJECT',
@@ -205,40 +246,67 @@ const REFINE_SCHEMA = {
   required: ['rewritten'],
 };
 
-async function refineText(text, action) {
+async function refineText(text, action, presetId) {
   const settings = await getSettings();
   if (!settings.apiKey) throw new Error('NO_API_KEY');
-  const instruction = REFINE_PROMPTS[action] || REFINE_PROMPTS.improve;
 
-  const key = cacheKey(`refine:${action}`, settings.model, text);
+  const prompt = resolvePrompt(settings, action, presetId);
+  const promptKey = presetId || action || 'improve';
+
+  const key = cacheKey(`refine:${promptKey}`, settings.model, text);
   if (cache.has(key)) return cache.get(key);
 
   return enqueue(async () => {
+    const systemInstruction =
+      settings.systemInstruction ||
+      (typeof GTStorage !== 'undefined' && GTStorage.DEFAULT_SYSTEM_INSTRUCTION
+        ? GTStorage.DEFAULT_SYSTEM_INSTRUCTION
+        : 'You are an expert writing assistant. Rewrite the provided text according to instructions. Output ONLY the final replacement text without notes, preambles, or conversational filler.');
+
+    const genConfig =
+      typeof buildGenerationConfig === 'function'
+        ? buildGenerationConfig(
+            settings.model,
+            settings.temperature,
+            settings.topP,
+            settings.fastZeroShot
+          )
+        : {
+            temperature: 0.4,
+            responseMimeType: 'application/json',
+            responseSchema: REFINE_SCHEMA,
+          };
+
     const raw = await callGemini(settings, {
-      contents: [{ parts: [{ text: `TEXT:\n${text}` }] }],
+      contents: [
+        {
+          role: 'user',
+          parts: [{ text: `${prompt}\n\n"${text}"` }],
+        },
+      ],
       systemInstruction: {
-        parts: [
-          {
-            text: `${instruction} Preserve the language of the original text. Return only the rewritten text — no preamble, no quotes, no markdown.`,
-          },
-        ],
+        parts: [{ text: systemInstruction }],
       },
-      generationConfig: {
-        temperature: 0.4,
-        responseMimeType: 'application/json',
-        responseSchema: REFINE_SCHEMA,
-      },
+      generationConfig: genConfig,
     });
-    let parsed;
-    try {
-      parsed = JSON.parse(raw);
-    } catch {
-      throw new Error('BAD_JSON');
-    }
-    if (typeof parsed.rewritten !== 'string' || !parsed.rewritten.trim()) {
+
+    const rewritten =
+      typeof parseRewrittenText === 'function'
+        ? parseRewrittenText(raw)
+        : (() => {
+            let parsed;
+            try {
+              parsed = JSON.parse(raw);
+            } catch {
+              throw new Error('BAD_JSON');
+            }
+            return parsed.rewritten;
+          })();
+
+    if (!rewritten || (typeof rewritten === 'string' && !rewritten.trim())) {
       throw new Error('EMPTY_RESPONSE');
     }
-    const result = { rewritten: parsed.rewritten };
+    const result = { rewritten: rewritten.trim() };
     cachePut(key, result);
     return result;
   });
@@ -247,21 +315,40 @@ async function refineText(text, action) {
 // ---------------------------------------------------------------------------
 // Message routing
 
-chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  const handlers = {
-    CHECK_TEXT: () => checkText(msg.text),
-    REFINE_TEXT: () => refineText(msg.text, msg.action),
-    GET_SETTINGS: () => getSettings(),
-    OPEN_OPTIONS: () => chrome.runtime.openOptionsPage().then(() => true),
-  };
-  const handler = handlers[msg.type];
-  if (!handler) return false;
+if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
+  chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+    const handlers = {
+      CHECK_TEXT: () => checkText(msg.text),
+      REFINE_TEXT: () => refineText(msg.text, msg.action, msg.presetId),
+      GET_SETTINGS: () => getSettings(),
+      OPEN_OPTIONS: () => chrome.runtime.openOptionsPage().then(() => true),
+    };
+    const handler = handlers[msg?.type];
+    if (!handler) return false;
 
-  handler()
-    .then((result) => sendResponse({ ok: true, result }))
-    .catch((err) => sendResponse({ ok: false, error: String(err.message || err) }));
-  return true; // async response
-});
+    handler()
+      .then((result) => sendResponse({ ok: true, result }))
+      .catch((err) => sendResponse({ ok: false, error: String(err.message || err) }));
+    return true; // async response
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Keyboard shortcut commands
+
+if (typeof chrome !== 'undefined' && chrome.commands?.onCommand) {
+  chrome.commands.onCommand.addListener(async (command) => {
+    if (command === 'trigger_rewrite') {
+      try {
+        const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+        const tab = tabs[0] || (await chrome.tabs.query({ active: true, currentWindow: true }))[0];
+        if (tab?.id) {
+          chrome.tabs.sendMessage(tab.id, { type: 'COMMAND_TRIGGER_REWRITE' }).catch(() => {});
+        }
+      } catch (_) {}
+    }
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Context menu: refine the current selection from a right-click.
@@ -274,27 +361,46 @@ const MENU_ACTIONS = [
   ['casual', 'Make casual'],
 ];
 
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.removeAll(() => {
-    chrome.contextMenus.create({
-      id: 'gemtype-root',
-      title: 'GemType',
-      contexts: ['selection'],
-    });
-    for (const [id, title] of MENU_ACTIONS) {
+if (typeof chrome !== 'undefined' && chrome.runtime?.onInstalled) {
+  chrome.runtime.onInstalled.addListener(() => {
+    if (!chrome.contextMenus) return;
+    chrome.contextMenus.removeAll(() => {
       chrome.contextMenus.create({
-        id: `gemtype-${id}`,
-        parentId: 'gemtype-root',
-        title,
+        id: 'gemtype-root',
+        title: 'GemType',
         contexts: ['selection'],
       });
-    }
+      for (const [id, title] of MENU_ACTIONS) {
+        chrome.contextMenus.create({
+          id: `gemtype-${id}`,
+          parentId: 'gemtype-root',
+          title,
+          contexts: ['selection'],
+        });
+      }
+    });
   });
-});
+}
 
-chrome.contextMenus.onClicked.addListener((info, tab) => {
-  if (!tab?.id || !info.menuItemId.startsWith('gemtype-')) return;
-  const action = info.menuItemId.replace('gemtype-', '');
-  if (action === 'root') return;
-  chrome.tabs.sendMessage(tab.id, { type: 'CONTEXT_REFINE', action }).catch(() => {});
-});
+if (typeof chrome !== 'undefined' && chrome.contextMenus?.onClicked) {
+  chrome.contextMenus.onClicked.addListener((info, tab) => {
+    if (!tab?.id || !info.menuItemId.startsWith('gemtype-')) return;
+    const action = info.menuItemId.replace('gemtype-', '');
+    if (action === 'root') return;
+    chrome.tabs.sendMessage(tab.id, { type: 'CONTEXT_REFINE', action }).catch(() => {});
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Exports for unit testing
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    getSettings,
+    callGemini,
+    checkText,
+    refineText,
+    resolvePrompt,
+    REFINE_PROMPTS,
+  };
+}
