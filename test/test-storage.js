@@ -36,8 +36,38 @@ test('GTStorage: returns default config when empty', async () => {
   assert.strictEqual(settings.topP, 0.95);
   assert.strictEqual(settings.previewBeforeReplace, true);
   assert.strictEqual(settings.fastZeroShot, true);
+  assert.strictEqual(settings.minTextLength, 15);
+  assert.strictEqual(GTStorage.DEFAULT_CONFIG.minTextLength, 15);
   assert.ok(Array.isArray(settings.customPresets));
   assert.strictEqual(settings.customPresets.length >= 3, true);
+});
+
+test('GTStorage: minTextLength configuration and validation', async () => {
+  const mock = createMockChrome();
+  globalThis.chrome = mock;
+
+  // Custom valid value
+  await GTStorage.saveSettings({ minTextLength: 25 });
+  let settings = await GTStorage.getSettings();
+  assert.strictEqual(settings.minTextLength, 25);
+
+  // String number should be parsed to integer
+  await GTStorage.saveSettings({ minTextLength: '50' });
+  settings = await GTStorage.getSettings();
+  assert.strictEqual(settings.minTextLength, 50);
+
+  // Invalid values fallback to default 15
+  await GTStorage.saveSettings({ minTextLength: 0 });
+  settings = await GTStorage.getSettings();
+  assert.strictEqual(settings.minTextLength, 15);
+
+  await GTStorage.saveSettings({ minTextLength: -5 });
+  settings = await GTStorage.getSettings();
+  assert.strictEqual(settings.minTextLength, 15);
+
+  await GTStorage.saveSettings({ minTextLength: 'not-a-number' });
+  settings = await GTStorage.getSettings();
+  assert.strictEqual(settings.minTextLength, 15);
 });
 
 test('GTStorage: saves apiKey to local and preferences to sync', async () => {

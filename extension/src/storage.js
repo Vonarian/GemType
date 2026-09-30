@@ -46,7 +46,8 @@ const GTStorage = (() => {
     customPresets: DEFAULT_PRESETS,
     disabledSites: [],
     language: 'auto',
-    enabled: true
+    enabled: true,
+    minTextLength: 15
   };
 
   async function getSyncSettings() {
@@ -88,6 +89,11 @@ const GTStorage = (() => {
     if (!Array.isArray(merged.customPresets) || merged.customPresets.length === 0) {
       merged.customPresets = [...DEFAULT_PRESETS];
     }
+
+    const parsedMinLen = parseInt(merged.minTextLength, 10);
+    merged.minTextLength = Number.isInteger(parsedMinLen) && parsedMinLen >= 1
+      ? parsedMinLen
+      : DEFAULT_CONFIG.minTextLength;
 
     return {
       ...merged,
