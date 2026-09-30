@@ -23,6 +23,7 @@ const DEFAULT_SETTINGS = {
   temperature: 0.3,
   topP: 0.95,
   fastZeroShot: true,
+  minTextLength: 15,
 };
 
 // ---------------------------------------------------------------------------
@@ -158,6 +159,10 @@ function checkSystemPrompt(settings) {
 
 async function checkText(text) {
   const settings = await getSettings();
+  const minLen = parseInt(settings.minTextLength, 10) || 15;
+  if (!text || text.trim().length < minLen) {
+    return { corrections: [] };
+  }
   if (!settings.apiKey) throw new Error('NO_API_KEY');
 
   const key = cacheKey('check', settings.model, text);
