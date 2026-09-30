@@ -312,6 +312,20 @@
       <input type="range" id="topP" min="0.00" max="1.00" step="0.05" value="0.95" />
       <div class="hint">Nucleus sampling threshold. Controls diversity of generated text.</div>
 
+      <!-- Minimum Text Length -->
+      <div class="slider-header" style="margin-top:16px;">
+        <label for="minTextLength">Minimum text length</label>
+        <span class="val-badge"><span id="minTextLengthVal">15</span> chars</span>
+      </div>
+      <input type="range" id="minTextLength" min="5" max="200" step="1" value="15" />
+      <div class="quick-btns">
+        <button type="button" class="btn-sm quick-len" data-len="10">10 (Phrases)</button>
+        <button type="button" class="btn-sm quick-len" data-len="15">15 (Standard)</button>
+        <button type="button" class="btn-sm quick-len" data-len="30">30 (Sentences)</button>
+        <button type="button" class="btn-sm quick-len" data-len="50">50 (Paragraphs)</button>
+      </div>
+      <div class="hint">Fields with fewer characters won't trigger automatic grammar checking, saving API rate limits.</div>
+
       <!-- System Instruction -->
       <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px;">
         <label for="systemInstruction" style="margin:0;">System instruction</label>

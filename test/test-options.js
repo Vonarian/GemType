@@ -25,6 +25,12 @@ test('options.html: contains all required controls, scripts, and inputs', () => 
   assert.ok(html.includes('data-temp="1.20"'), 'creative quick temp button missing');
   assert.ok(html.includes('id="topP"'), 'topP slider missing');
   assert.ok(html.includes('id="topPVal"'), 'topPVal badge missing');
+  assert.ok(html.includes('id="minTextLength"'), 'minTextLength slider missing');
+  assert.ok(html.includes('id="minTextLengthVal"'), 'minTextLengthVal badge missing');
+  assert.ok(html.includes('data-len="10"'), 'quick min-len 10 button missing');
+  assert.ok(html.includes('data-len="15"'), 'quick min-len 15 button missing');
+  assert.ok(html.includes('data-len="30"'), 'quick min-len 30 button missing');
+  assert.ok(html.includes('data-len="50"'), 'quick min-len 50 button missing');
 
   // System instruction
   assert.ok(html.includes('id="systemInstruction"'), 'systemInstruction textarea missing');
@@ -87,6 +93,13 @@ function createMockElement(id, tag = 'div', type = '') {
 }
 
 function setupMockDOM() {
+  const quickLenButtons = ['10', '15', '30', '50'].map((len) => {
+    const btn = createMockElement('', 'button');
+    btn.dataset.len = len;
+    btn.className = 'btn-sm quick-len';
+    return btn;
+  });
+
   const elements = {
     apiKey: createMockElement('apiKey', 'input', 'password'),
     toggleKey: createMockElement('toggleKey', 'button'),
@@ -97,6 +110,8 @@ function setupMockDOM() {
     tempVal: createMockElement('tempVal', 'span'),
     topP: createMockElement('topP', 'input', 'range'),
     topPVal: createMockElement('topPVal', 'span'),
+    minTextLength: createMockElement('minTextLength', 'input', 'range'),
+    minTextLengthVal: createMockElement('minTextLengthVal', 'span'),
     systemInstruction: createMockElement('systemInstruction', 'textarea'),
     resetSystemInstruction: createMockElement('resetSystemInstruction', 'button'),
     fastZeroShot: createMockElement('fastZeroShot', 'input', 'checkbox'),
@@ -117,9 +132,16 @@ function setupMockDOM() {
     readyState: 'complete',
     getElementById: (id) => elements[id] || null,
     createElement: (tag) => createMockElement('', tag),
-    querySelectorAll: () => [],
+    querySelectorAll: (sel = '') => {
+      if (sel.includes('.quick-len') || sel.includes('data-len')) {
+        return quickLenButtons;
+      }
+      return [];
+    },
     addEventListener: () => {}
   };
+
+  elements._quickLenButtons = quickLenButtons;
 
   return elements;
 }
@@ -281,4 +303,61 @@ test('options.js: system instruction reset', async () => {
     GTStorage.DEFAULT_SYSTEM_INSTRUCTION
   );
 });
+
+test('options.js: minTextLength slider, live badge updates, preset buttons, and persistence', async () => {
+  const mockElements = setupMockDOM();
+  const mockChrome = createMockChrome();
+  globalThis.chrome = mockChrome;
+
+  const { GTStorage } = require('../extension/src/storage.js');
+  const options = require('../extension/src/options.js');
+
+  // Wire event handlers on the mock DOM
+  if (options.initDOMEvents) {
+    options.initDOMEvents();
+  }
+
+  // Verify default load falls back to 15
+  await GTStorage.saveSettings({});
+  await options.load();
+  assert.strictEqual(Number(mockElements.minTextLength.value), 15);
+  assert.strictEqual(Number(mockElements.minTextLengthVal.textContent), 15);
+
+  // Test loading with custom minTextLength
+  await GTStorage.saveSettings({ minTextLength: 30 });
+  await options.load();
+  assert.strictEqual(Number(mockElements.minTextLength.value), 30);
+  assert.strictEqual(Number(mockElements.minTextLengthVal.textContent), 30);
+
+  // Test slider input event updates badge
+  mockElements.minTextLength.value = '45';
+  mockElements.minTextLength.dispatchEvent({ type: 'input', target: mockElements.minTextLength });
+  assert.strictEqual(Number(mockElements.minTextLengthVal.textContent), 45);
+
+  // Test collect() reads the updated slider value
+  const collected = options.collect();
+  assert.strictEqual(collected.minTextLength, 45);
+
+  // Test preset buttons update slider and badge
+  const presetBtn10 = mockElements._quickLenButtons.find(b => b.dataset.len === '10');
+  assert.ok(presetBtn10, 'Preset 10 button should exist');
+  presetBtn10.dispatchEvent({ type: 'click', target: presetBtn10 });
+
+  assert.strictEqual(Number(mockElements.minTextLength.value), 10);
+  assert.strictEqual(Number(mockElements.minTextLengthVal.textContent), 10);
+
+  // Test preset button 50
+  const presetBtn50 = mockElements._quickLenButtons.find(b => b.dataset.len === '50');
+  assert.ok(presetBtn50, 'Preset 50 button should exist');
+  presetBtn50.dispatchEvent({ type: 'click', target: presetBtn50 });
+
+  assert.strictEqual(Number(mockElements.minTextLength.value), 50);
+  assert.strictEqual(Number(mockElements.minTextLengthVal.textContent), 50);
+
+  // Test save persists minTextLength
+  await options.save();
+  const updatedSettings = await GTStorage.getSettings();
+  assert.strictEqual(updatedSettings.minTextLength, 50);
+});
+
 

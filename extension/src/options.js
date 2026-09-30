@@ -222,6 +222,11 @@ async function load() {
   if ($('topP')) $('topP').value = topP;
   if ($('topPVal')) $('topPVal').textContent = topP.toFixed(2);
 
+  // Min text length
+  const minTextLength = s.minTextLength || 15;
+  if ($('minTextLength')) $('minTextLength').value = minTextLength;
+  if ($('minTextLengthVal')) $('minTextLengthVal').textContent = minTextLength;
+
   // System instruction
   if ($('systemInstruction')) {
     $('systemInstruction').value =
@@ -256,6 +261,9 @@ function collect() {
 
   const tempVal = $('temperature') ? parseFloat($('temperature').value) : 0.3;
   const topPVal = $('topP') ? parseFloat($('topP').value) : 0.95;
+  const minTextLength = $('minTextLength')
+    ? parseInt($('minTextLength').value, 10) || 15
+    : 15;
 
   return {
     apiKey: $('apiKey') ? $('apiKey').value.trim() : '',
@@ -263,6 +271,7 @@ function collect() {
     language: $('language') ? $('language').value : 'auto',
     temperature: Number.isFinite(tempVal) ? tempVal : 0.3,
     topP: Number.isFinite(topPVal) ? topPVal : 0.95,
+    minTextLength,
     systemInstruction:
       $('systemInstruction')?.value.trim() ||
       GTStorage.DEFAULT_SYSTEM_INSTRUCTION,
@@ -336,12 +345,33 @@ function initDOMEvents() {
     });
   }
 
+  const minLenSlider = $('minTextLength');
+  if (minLenSlider) {
+    minLenSlider.addEventListener('input', (e) => {
+      const target = e?.target || minLenSlider;
+      const val = parseInt(target.value, 10);
+      if ($('minTextLengthVal')) {
+        $('minTextLengthVal').textContent = Number.isFinite(val) ? val : 15;
+      }
+    });
+  }
+
   document.querySelectorAll('.quick-temp').forEach((btn) => {
     btn.addEventListener('click', () => {
       const val = parseFloat(btn.dataset.temp);
       if (Number.isFinite(val)) {
         if ($('temperature')) $('temperature').value = val;
         if ($('tempVal')) $('tempVal').textContent = val.toFixed(2);
+      }
+    });
+  });
+
+  document.querySelectorAll('.quick-len, [data-len]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const val = parseInt(btn.dataset.len, 10);
+      if (Number.isFinite(val)) {
+        if ($('minTextLength')) $('minTextLength').value = val;
+        if ($('minTextLengthVal')) $('minTextLengthVal').textContent = val;
       }
     });
   });
@@ -460,5 +490,6 @@ if (typeof module !== 'undefined' && module.exports) {
     setEditingPresetId: (id) => {
       editingPresetId = id;
     },
+    initDOMEvents,
   };
 }
