@@ -1,11 +1,11 @@
 {
   "manifest_version": 3,
-  "name": "GemType — AI Writing Assistant",
+  "name": "TypeSpark — AI Writing & Tone Assistant",
   "version": "0.1.6",
-  "description": "Grammarly-style grammar checking and text refinement on any website, powered by the Gemini API (bring your own key).",
+  "description": "AI grammar checking, custom tone pills, and inline rewriting on any website, powered by the Gemini API (bring your own key).",
   "browser_specific_settings": {
     "gecko": {
-      "id": "gemtype@matily.org",
+      "id": "typespark@vonarian.github.io",
       "strict_min_version": "115.0",
       "data_collection_permissions": {
         "required": ["websiteContent"]

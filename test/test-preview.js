@@ -690,8 +690,8 @@ test('refine run: preview onAccept guards against text changed while preview is 
   assert.strictEqual(GT.preview.getCard(), null, 'Preview card must be closed');
   assert.strictEqual(textarea.value, 'Completely different content typed by user.');
   assert.ok(
-    toasts.includes('GemType: text changed — rewrite not applied'),
-    'Toast "GemType: text changed — rewrite not applied" must be shown'
+    toasts.includes('TypeSpark: text changed — rewrite not applied'),
+    'Toast "TypeSpark: text changed — rewrite not applied" must be shown'
   );
   assert.strictEqual(
     toasts.includes('Rewritten — press Ctrl/Cmd+Z to undo'),

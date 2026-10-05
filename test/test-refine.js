@@ -412,7 +412,7 @@ test('refine toolbar: triggerFromShortcut and COMMAND_TRIGGER_REWRITE', () => {
   GT.refine.triggerFromShortcut();
   assert.strictEqual(GT.refine.getBar(), null, 'Toolbar should not show without selection');
   assert.ok(
-    toasts.includes('GemType: select text first to rewrite'),
+    toasts.includes('TypeSpark: select text first to rewrite'),
     'Should display warning toast when no selection'
   );
 

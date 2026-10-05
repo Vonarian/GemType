@@ -375,7 +375,7 @@ async function updateContextMenus(settings) {
   const rebuild = () => {
     chrome.contextMenus.create({
       id: 'gemtype-root',
-      title: 'GemType',
+      title: 'TypeSpark',
       contexts: ['selection'],
     });
     for (const preset of presets) {

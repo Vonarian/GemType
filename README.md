@@ -1,23 +1,20 @@
 <div align="center">
 
-<img src="assets/logo.svg" alt="GemType" width="420" />
+<img src="extension/icons/icon128.png" alt="TypeSpark" width="96" />
 
-**A free, open-source Grammarly alternative for your browser, Microsoft Word, and the whole desktop — powered by your own Gemini API key.**
+# TypeSpark — AI Writing & Tone Assistant
 
-[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/linnnamnhkciekgpnegkcajcafmjlhgh?label=Chrome%20Web%20Store&logo=googlechrome&logoColor=white&color=4285F4)](https://chromewebstore.google.com/detail/linnnamnhkciekgpnegkcajcafmjlhgh)
-[![Users](https://img.shields.io/chrome-web-store/users/linnnamnhkciekgpnegkcajcafmjlhgh?color=10a37f)](https://chromewebstore.google.com/detail/linnnamnhkciekgpnegkcajcafmjlhgh)
-[![Rating](https://img.shields.io/chrome-web-store/rating/linnnamnhkciekgpnegkcajcafmjlhgh?color=f59e0b)](https://chromewebstore.google.com/detail/linnnamnhkciekgpnegkcajcafmjlhgh)
-[![Edge Add-ons](https://img.shields.io/badge/Edge%20Add--ons-Live-0C88DA?logo=microsoftedge&logoColor=white)](https://microsoftedge.microsoft.com/addons/detail/edbehlnmfcjhlbdlnmklicdoaopobbel)
-[![Firefox Add-ons](https://img.shields.io/amo/v/gemtype-ai-writing-assistant?label=Firefox%20Add-ons&logo=firefoxbrowser&logoColor=white&color=FF7139)](https://addons.mozilla.org/firefox/addon/gemtype-ai-writing-assistant/)
+**A free, open-source AI writing, grammar, and tone assistant for your browser — powered by your own Gemini API key.**
+
 [![Manifest V3](https://img.shields.io/badge/manifest-v3-6366f1)](extension/manifest.json)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-D22128.svg)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](../../pulls)
 
-### [➜ Install free: Chrome](https://chromewebstore.google.com/detail/linnnamnhkciekgpnegkcajcafmjlhgh) · [Edge](https://microsoftedge.microsoft.com/addons/detail/edbehlnmfcjhlbdlnmklicdoaopobbel) · [Firefox](https://addons.mozilla.org/firefox/addon/gemtype-ai-writing-assistant/)
+### [➜ Download Latest Release (Chrome / Brave / Edge / Firefox)](https://github.com/Vonarian/GemType/releases/latest)
 
-**[gemtype.matily.org](https://gemtype.matily.org)** — the official site, with a live demo and everything in one place.
+*Forked from and built upon [GemType](https://github.com/matily97/GemType) (Apache-2.0) with expanded generation controls, custom preset pills, preview tooltips, keyboard navigation, and configurable minimum text thresholds.*
 
-<img src="assets/hero.svg" alt="GemType demo: typing with mistakes, wavy underlines appear, one click fixes them" width="820" />
+<img src="assets/hero.svg" alt="TypeSpark demo: typing with mistakes, wavy underlines appear, one click fixes them" width="820" />
 
 </div>
 

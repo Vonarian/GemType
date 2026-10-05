@@ -270,7 +270,7 @@ GT.refine = (() => {
     if (busy) return;
     const captured = captureSelection();
     if (!captured || !captured.text || captured.text.trim().length === 0) {
-      GT.ui.toast('GemType: select text first to rewrite');
+      GT.ui.toast('TypeSpark: select text first to rewrite');
       return;
     }
     show(captured);
@@ -292,7 +292,7 @@ GT.refine = (() => {
       const label = GT.ui.el('button', '', bar);
       label.textContent = 'Rewriting…';
     } else {
-      GT.ui.toast('GemType: rewriting…');
+      GT.ui.toast('TypeSpark: rewriting…');
     }
 
     const res = await GT.sendMessage({
@@ -306,13 +306,13 @@ GT.refine = (() => {
     if (!res.ok) {
       hide();
       if (res.error === 'NO_API_KEY') {
-        GT.ui.toast('GemType: add your Gemini API key in the extension settings');
+        GT.ui.toast('TypeSpark: add your Gemini API key in the extension settings');
       } else if (res.error === 'RATE_LIMITED') {
-        GT.ui.toast('GemType: rate limited — try again in a moment');
+        GT.ui.toast('TypeSpark: rate limited — try again in a moment');
       } else if (/context invalidated|receiving end does not exist/i.test(res.error)) {
-        GT.ui.toast('GemType was updated — refresh this page to reconnect');
+        GT.ui.toast('TypeSpark was updated — refresh this page to reconnect');
       } else {
-        GT.ui.toast('GemType: rewrite failed');
+        GT.ui.toast('TypeSpark: rewrite failed');
       }
       return;
     }
@@ -324,7 +324,7 @@ GT.refine = (() => {
       const idx = nowText.indexOf(job.text);
       if (idx === -1) {
         hide();
-        GT.ui.toast('GemType: text changed — rewrite not applied');
+        GT.ui.toast('TypeSpark: text changed — rewrite not applied');
         return;
       }
       start = idx;
@@ -336,7 +336,7 @@ GT.refine = (() => {
 
     const rewritten = res.result?.rewritten;
     if (rewritten == null) {
-      GT.ui.toast('GemType: rewrite failed');
+      GT.ui.toast('TypeSpark: rewrite failed');
       return;
     }
 
@@ -375,7 +375,7 @@ GT.refine = (() => {
               if (GT.preview && typeof GT.preview.close === 'function') {
                 GT.preview.close();
               }
-              GT.ui.toast('GemType: text changed — rewrite not applied');
+              GT.ui.toast('TypeSpark: text changed — rewrite not applied');
               return;
             }
             curStart = idx;
@@ -384,7 +384,7 @@ GT.refine = (() => {
           if (GT.replaceRange(job.field, curStart, curEnd, rewritten)) {
             GT.ui.toast('Rewritten — press Ctrl/Cmd+Z to undo');
           } else {
-            GT.ui.toast('GemType: could not apply the rewrite here');
+            GT.ui.toast('TypeSpark: could not apply the rewrite here');
           }
           if (GT.preview && typeof GT.preview.close === 'function') {
             GT.preview.close();
@@ -403,7 +403,7 @@ GT.refine = (() => {
       if (GT.replaceRange(job.field, start, end, rewritten)) {
         GT.ui.toast('Rewritten — press Ctrl/Cmd+Z to undo');
       } else {
-        GT.ui.toast('GemType: could not apply the rewrite here');
+        GT.ui.toast('TypeSpark: could not apply the rewrite here');
       }
     }
   }
@@ -445,7 +445,7 @@ GT.refine = (() => {
   function runOnCurrentSelection(action) {
     const captured = captureSelection();
     if (!captured) {
-      GT.ui.toast('GemType: select text inside an editable field first');
+      GT.ui.toast('TypeSpark: select text inside an editable field first');
       return;
     }
     run(action, captured);
@@ -455,11 +455,11 @@ GT.refine = (() => {
   function runOnField(field, action) {
     const { text } = GT.extract(field);
     if (text.trim().length < 3) {
-      GT.ui.toast('GemType: nothing to refine yet');
+      GT.ui.toast('TypeSpark: nothing to refine yet');
       return;
     }
     if (text.length > 6000) {
-      GT.ui.toast('GemType: text too long to refine in one go — select a part instead');
+      GT.ui.toast('TypeSpark: text too long to refine in one go — select a part instead');
       return;
     }
     run(action, { field, start: 0, end: text.length, text });

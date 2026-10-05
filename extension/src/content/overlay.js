@@ -355,7 +355,7 @@ GT.card = (() => {
 
     const header = GT.ui.el('div', 'gt-card-header', cardEl);
     const title = GT.ui.el('span', '', header);
-    title.textContent = opts.title || 'GemType suggestions';
+    title.textContent = opts.title || 'TypeSpark suggestions';
     const closeBtn = GT.ui.el('span', 'gt-close', header);
     closeBtn.textContent = '✕';
     closeBtn.addEventListener('click', close);
@@ -756,7 +756,7 @@ GT.FieldOverlay = class {
 
     this.badge.className = 'gt-badge';
     this.badge.textContent = '';
-    this.badge.title = 'GemType';
+    this.badge.title = 'TypeSpark';
     if (this.state === 'checking') {
       GT.ui.el('div', 'gt-spin', this.badge);
       this.badge.title = 'Checking…';
@@ -771,10 +771,10 @@ GT.FieldOverlay = class {
     } else if (this.state === 'error') {
       this.badge.classList.add('gt-error');
       this.badge.textContent = '!';
-      this.badge.title = 'GemType needs attention — click';
+      this.badge.title = 'TypeSpark needs attention — click';
     } else {
       this.badge.classList.add('gt-off');
-      this.badge.textContent = 'G';
+      this.badge.textContent = 'T';
     }
   }
 
@@ -795,7 +795,7 @@ GT.FieldOverlay = class {
           'The Gemini API rate limit was hit. Checking will resume automatically in a moment.',
         ],
         EXTENSION_RELOADED: [
-          { bold: 'GemType was updated.' },
+          { bold: 'TypeSpark was updated.' },
           ' Refresh this page (F5 / Cmd+R) to reconnect — no need to restart the browser.',
         ],
       };
@@ -806,14 +806,14 @@ GT.FieldOverlay = class {
         { link: 'settings' },
         '.',
       ];
-      GT.card.open(this, [], anchor, { title: 'GemType', message });
+      GT.card.open(this, [], anchor, { title: 'TypeSpark', message });
       return;
     }
     if (this.corrections.length) {
       GT.card.open(this, this.corrections, anchor, { refineField: this.field });
     } else {
       GT.card.open(this, [], anchor, {
-        title: 'GemType',
+        title: 'TypeSpark',
         refineField: this.field,
         message:
           this.state === 'checking'

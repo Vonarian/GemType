@@ -42,7 +42,7 @@ test('background.js: updateContextMenus builds context menu from customPresets',
 
     assert.ok(removeAllCalled, 'removeAll must be called before creating items');
     assert.strictEqual(createdMenus[0].id, 'gemtype-root');
-    assert.strictEqual(createdMenus[0].title, 'GemType');
+    assert.strictEqual(createdMenus[0].title, 'TypeSpark');
 
     const itemIds = createdMenus.slice(1).map((m) => m.id);
     const itemTitles = createdMenus.slice(1).map((m) => m.title);
