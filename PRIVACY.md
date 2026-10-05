@@ -1,15 +1,16 @@
-# GemType Privacy Policy
+# TypeSpark Privacy Policy
 
-*Last updated: July 2, 2026*
+*Last updated: October 5, 2026*
 
-GemType is a browser extension that checks grammar and rewrites text using
+TypeSpark is a browser extension that checks grammar and rewrites text using
 Google's Gemini API. It is designed so that **we (the developers) never see,
-receive, or store any of your data**. There is no GemType server.
+receive, or store any of your data**. There is no TypeSpark server.
 
 ## What data is processed, and where it goes
 
 - **Text you are actively editing.** When you type in a text field on a
-  website (and GemType is enabled for that site), the text of that field is
+  website (and TypeSpark is enabled for that site, and the text meets your
+  configured minimum character threshold), the text of that field is
   sent to **Google's Gemini API** (`generativelanguage.googleapis.com`) to
   detect errors or produce a rewrite you requested. This is the extension's
   single purpose. The request is made directly from your browser to Google
@@ -17,11 +18,13 @@ receive, or store any of your data**. There is no GemType server.
   Google's handling of this data is governed by the
   [Google API Terms](https://developers.google.com/terms) and the
   [Gemini API Additional Terms](https://ai.google.dev/gemini-api/terms).
-- **Your Gemini API key.** Stored only on your device in
-  `chrome.storage.local`. It is not synced through your Google account and is
+- **Your Gemini API key.** Stored strictly on your device in
+  `chrome.storage.local`. It is never synced to `chrome.storage.sync` and is
   sent only to `generativelanguage.googleapis.com` as authentication.
-- **Your settings** (model choice, language, disabled sites, on/off state).
-  Stored only on your device in `chrome.storage.local`.
+- **Your preferences** (model choice, temperature, top-p, system instruction,
+  custom rewrite presets, minimum text length threshold, language, disabled
+  sites, on/off state). Stored in browser storage (`chrome.storage.sync` with
+  fallback to `chrome.storage.local`).
 
 ## What we do NOT do
 
@@ -38,24 +41,23 @@ receive, or store any of your data**. There is no GemType server.
 
 ## Your controls
 
-- Disable GemType globally or per-site from the toolbar popup
+- Disable TypeSpark globally or per-site from the toolbar popup
+- Configure a minimum text length threshold so short inputs never trigger API calls
 - Website owners can opt fields out with `data-gemtype="false"`
-- Uninstalling the extension deletes all stored settings, including your API
-  key
-- Avoid using GemType in fields containing passwords or other secrets; text
+- Uninstalling the extension deletes all stored settings, including your API key
+- Avoid using TypeSpark in fields containing passwords or other secrets; text
   in checked fields is processed by Google's cloud API
 
 ## Permissions explained
 
 | Permission | Why |
 |---|---|
-| `storage` | Save your API key and settings locally |
-| `contextMenus` | The right-click "GemType" rewrite menu |
+| `storage` | Save your API key (`storage.local`) and preferences (`storage.sync`) |
+| `contextMenus` | The right-click "TypeSpark" rewrite menu |
 | `generativelanguage.googleapis.com` | The Gemini API endpoint — the only network destination |
-| Content scripts on all sites | Grammar checking must run inside the text fields of whatever site you write on; it stays inert until you focus a field |
+| Content scripts on all sites | Grammar checking and inline rewriting must run inside the text fields of whatever site you write on; it stays inert until you focus a field |
 
 ## Contact
 
-Questions or concerns: email **support@matily.org**, or open an issue on the
-[GitHub repository](https://github.com/riponcm/GemType/issues) once it is
-public.
+Questions or concerns: open an issue on the
+[GitHub repository](https://github.com/Vonarian/TypeSpark/issues).
