@@ -12,7 +12,7 @@
 
 ### [➜ Download Latest Release (Chrome / Brave / Edge / Firefox)](https://github.com/Vonarian/TypeSpark/releases/latest)
 
-*Forked from and built upon [GemType](https://github.com/riponcm/GemType) (Apache-2.0) with full generation parameter controls, custom rewrite preset pills, interactive preview tooltips, keyboard navigation, and configurable minimum text thresholds.*
+> **Upstream Credit:** TypeSpark is a community fork of [**GemType**](https://github.com/riponcm/GemType) ([gemtype.matily.org](https://gemtype.matily.org)), originally created and maintained by [**Ripon Chandra Malo**](https://github.com/riponcm) at [**Matily**](https://matily.org) under the Apache-2.0 License. Rebranded in compliance with [`TRADEMARK.md`](TRADEMARK.md).
 
 <img src="assets/hero.svg" alt="TypeSpark demo: typing with mistakes, wavy underlines appear, one click fixes them" width="820" />
 
@@ -131,8 +131,31 @@ python3 -m http.server 8377
 open http://localhost:8377/test/harness.html
 ```
 
-## License & Attribution
+## Credits & Upstream Attribution
 
-[Apache License 2.0](LICENSE) — see [NOTICE](NOTICE).
+**TypeSpark** stands on the shoulders of [**GemType**](https://github.com/riponcm/GemType) ([gemtype.matily.org](https://gemtype.matily.org)), created by [**Ripon Chandra Malo**](https://github.com/riponcm) ([**Matily**](https://matily.org)).
 
-TypeSpark is a fork of [GemType](https://github.com/riponcm/GemType) originally created by Ripon Chandra Malo ([Matily](https://matily.org)). In accordance with [TRADEMARK.md](TRADEMARK.md), this fork is independently branded as **TypeSpark** with its own name and icon.
+- **Original GemType Foundation (by Ripon Chandra Malo / Matily):**
+  - Shadow-DOM non-invasive underline overlay engine (`Range.getClientRects()` & mirror measurement)
+  - Live grammar and spelling checking with client-side snippet anchoring and automatic sentence re-checking
+  - Framework-safe undoable text replacement (`execCommand` + native fallback)
+  - Direct client-to-Gemini BYOK architecture, rate-limit backoff, and response caching
+  - Desktop menu-bar/tray app (`desktop/`) and Microsoft Word task-pane add-in (`msword/`)
+- **Added in TypeSpark (by [@Vonarian](https://github.com/Vonarian)):**
+  - Generation parameter controls (Temperature, Top-P, custom System Instruction, Fast Zero-Shot `thinkingConfig`)
+  - Custom Rewrite Preset Pills CRUD manager with reordering and dynamic right-click context menu sync
+  - Interactive floating preview tooltip (`Enter` to accept, `Esc` to discard)
+  - Full keyboard navigation and `Alt+Shift+G` shortcut trigger
+  - Configurable minimum text length threshold (`minTextLength`)
+  - Unified `chrome.storage.sync` + `chrome.storage.local` storage layer
+
+If you appreciate the core engine behind this extension, please consider starring the [original GemType repository](https://github.com/riponcm/GemType) or sponsoring its creator at **[github.com/sponsors/riponcm](https://github.com/sponsors/riponcm)**.
+
+## License
+
+Licensed under the [Apache License 2.0](LICENSE) — see [NOTICE](NOTICE) for full copyright and attribution details.
+
+Original work Copyright © 2026 Ripon Chandra Malo ([Matily](https://matily.org)).
+Modifications and TypeSpark branding Copyright © 2026 [Vonarian](https://github.com/Vonarian).
+
+*(In compliance with [TRADEMARK.md](TRADEMARK.md), the "GemType" name and logo are trademarks of Ripon Chandra Malo / Matily and are not used to brand this derivative distribution.)*

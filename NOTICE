@@ -8,3 +8,16 @@ This product is licensed under the Apache License, Version 2.0 (see LICENSE).
 
 "GemType" and the GemType logo are trademarks of Ripon Chandra Malo / Matily
 and are not licensed under the Apache License — see TRADEMARK.md.
+
+-------------------------------------------------------------------------------
+TypeSpark — AI Writing & Tone Assistant (Derivative Work)
+Copyright 2026 Vonarian (https://github.com/Vonarian/TypeSpark)
+
+This software is a modified fork of GemType (https://github.com/riponcm/GemType)
+originally developed by Ripon Chandra Malo (Matily). Modifications include:
+- Rebranding to TypeSpark (name, icons, manifests, and UI labels) per TRADEMARK.md
+- Unified storage layer (`extension/src/storage.js`)
+- Adaptive Gemini generation config & thought filtering (`extension/src/background-helper.js`)
+- Generation controls, custom preset pills CRUD, and minimum text length threshold (`extension/src/options.*`)
+- Interactive preview tooltip, keyboard navigation, and shortcut trigger (`extension/src/content/*`)
+

@@ -57,7 +57,9 @@ receive, or store any of your data**. There is no TypeSpark server.
 | `generativelanguage.googleapis.com` | The Gemini API endpoint — the only network destination |
 | Content scripts on all sites | Grammar checking and inline rewriting must run inside the text fields of whatever site you write on; it stays inert until you focus a field |
 
-## Contact
+## Contact & Attribution
 
 Questions or concerns: open an issue on the
 [GitHub repository](https://github.com/Vonarian/TypeSpark/issues).
+
+*TypeSpark is based on the privacy-first architecture of [GemType](https://github.com/riponcm/GemType), originally created by Ripon Chandra Malo ([Matily](https://matily.org)) under the Apache-2.0 License.*
